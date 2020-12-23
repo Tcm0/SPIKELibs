@@ -24,8 +24,11 @@ class colorDistanceSensorModes:
     COUNT_MODE = 2      #Counts how often things were nearby
     REFL_LIGHT_MODE = 3 #Measures the reflected light of the LED in percent
     AMB_LIGHT_MODE = 4  #Measures the ambient light from other sources
-    RGB_MODE = 6
+    #LED_COLOR_MODE = 5  #Probably sets LED color. Does not work yet
+    RGB_MODE = 6        #Measures PF data in RAW RGB
+    #https://github.com/pybricks/pybricks-micropython/blob/0b9b18a084ae72f419ce06b4168bc0dbb12d8a94/pybricks/pupdevices/pb_type_pupdevices_colordistancesensor.c#L28
     #PF_MODE = 7        #Does not work yet
+    #COMBINED_MODE = 8  #Officially called SPEC1. Seems to bundle serveral of the values from above.
 
 class UARTSensor:
     __mode = 0
