@@ -7,6 +7,7 @@ mySensor = colorDistanceSensor("F", 7)
 #PFComboDirectCommand, PFSingleOutputCommand and PFComboPWMCommand
 force = ForceSensor('E')
 
+#This example "spams" the sensor with commands. It would be better to send each command only once or twice!
 while True:
     if force.is_pressed():
         mySensor.PFComboDirectCommand(PFChannel.CHANNEL_4, PFMotor.BACKWARD, PFMotor.FORWARD)
