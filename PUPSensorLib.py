@@ -151,11 +151,12 @@ class colorDistanceSensor(UARTSensor):
     #             Power Functions V1 Receivers don't support this command (V1.2 however do). You have to use them as second receivers.
     def PFChangeAddressSpace(self, channel, currentAddressSpace = 0):
         self.__mode = 7
-        #Send 3 toggle addresses CMDs with Toggle bit = 0 and 3 with toggle bit = 1. I couldn't get more relieable commands.
+        #Send 3 toggle addresses CMDs with Toggle bit = 0 and toggle bit = 1. toggle seems to work like a remote press.
+        #0: button gets pressed 1: button gets released
         for x in range(3):
             getattr(hub.port, self.__port).device.mode(7, bytes([(currentAddressSpace<<7) | 6]) + channel)
             utime.sleep_ms(150)
-        for x in range(3):
+        #for x in range(3):
             getattr(hub.port, self.__port).device.mode(7, bytes([(currentAddressSpace<<7) | 6]) + bytes([8 |channel[0]]))
             utime.sleep_ms(150)
     
