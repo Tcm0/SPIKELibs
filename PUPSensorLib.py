@@ -17,18 +17,18 @@ class motionSensorModes:
 class tiltSensorModes:
     ANGLE_DEG_MODE = 0  #Measures the angle in both directions (up to 45 deg)
     TILT_DIR_MODE = 1
-    CRASH_CNT_MODE = 2  #probably amount of "crashes" (how often sensor hit something else)
+    CRASH_CNT_MODE = 2  #probably amount of "crashes" (how often the sensor was shaked)
     #CAL_MODE = 3
 
 
 class colorDistanceSensorModes:
-    COLOR_MODE = 0      #Measures a color ID (see colorDistanceSensorColorID)
+    COLOR_MODE = 0      #Measures a color ID
     DISTANCE_MODE = 1   #Measures the distance (up to 10)
     COUNT_MODE = 2      #Counts how often things were nearby
     REFL_LIGHT_MODE = 3 #Measures the reflected light of the LED in percent
     AMB_LIGHT_MODE = 4  #Measures the ambient light from other sources
-    LED_COLOR_MODE = 5 #Sets the color of the sensor's LED (see colorDistanceSensorLight)
-    RGB_MODE = 6        #Measures light data in RAW RGB
+    LED_COLOR_MODE = 5 #Sets the color of the sensor's LED
+    RGB_MODE = 6        #Measures PF data in RAW RGB
     #https://github.com/pybricks/pybricks-micropython/blob/0b9b18a084ae72f419ce06b4168bc0dbb12d8a94/pybricks/pupdevices/pb_type_pupdevices_colordistancesensor.c#L28
     PF_MODE = 7        #Send Power Functions commands
     #COMBINED_MODE = 8  #Officially called SPEC1. Seems to bundle serveral of the values from above.
@@ -42,7 +42,7 @@ class colorDistanceSensorLight:
     COLOR_WHITE = 10
 
 #Color IDs for COLOR_MODE of colorDistanceSensor
-class colorDistanceSensorColorID:
+class colorDistanceSensorDetectColors:
     COLOR_BLACK = 0
     COLOR_BLUE = 3
     COLOR_GREEN = 5
@@ -52,13 +52,13 @@ class colorDistanceSensorColorID:
     #TODO COLOR_PINK, COLOR_TURQUOISE and COLOR_ORANGE are missing
 
 class PFMotor:
-    #Constants for Power Functions combo direct mode
+    #Constants for combo direct mode
     FLOAT = b'\x00'
     FORWARD = b'\x01'
     BACKWARD = b'\x02'
     BRAKE = b'\x03'
 
-    #Constants for Power Functions single output and combo PWM modes
+    #Constants for single output and combo PWM modes
     PWM_FLOAT = b'\x00'
     PWM_FORWARD_1 = b'\x01'
     PWM_FORWARD_2 = b'\x02'
@@ -120,29 +120,38 @@ class colorDistanceSensor(UARTSensor):
     #This mode has a timeout but the sensor will repeat the command until you send another cmd or stop the program
     #motor1 and motor2 are NOT PWM commands
     #This mode is used by the normal PF remote (and the EV3 remote)
-    def PFComboDirectCommand(self, channel, motor1, motor2):  #Channel of receiver, blue port, red port
+    def PFComboDirectCommand(self, channel, motor1, motor2, addressSpace = 0):  #Channel of receiver, blue port, red port
         self.__mode = 7
         PFmode = b'\x10'
         motor1 = motor1[0] << 2
-        sendbuf = PFmode[0] | motor1 | motor2[0]
+        sendbuf = (addressSpace << 7) | PFmode[0] | motor1 | motor2[0]
         getattr(hub.port, self.__port).device.mode(7, bytes([sendbuf]) + channel)
     
     #This mode has no timeout (except special cases). It's used by the PF train remote
     #output is the port of the receiver. It can be 0 for the red port, 1 for the blue one
     #data expects a PWM command if mode = 0 (default). See PF protocol for mode = 1
-    def PFSingleOutputCommand(self, channel, output, data, PFmode = 0):    #basically channel, output and speed
+    def PFSingleOutputCommand(self, channel, output, data, PFmode = 0, addressSpace = 0):    #basically channel, output and speed
         self.__mode = 7
         nibble2 = 4 | (PFmode << 1) | output
-        getattr(hub.port, self.__port).device.mode(7, bytes([(nibble2 << 4) | data[0]]) + channel)
+        getattr(hub.port, self.__port).device.mode(7, bytes([(addressSpace << 7) | (nibble2 << 4) | data[0]]) + channel)
     
     #This mode has timeout. motor1 and motor2 are PWM commands. First motor is red port, second is blue port
-    def PFComboPWMCommand(self, channel, motor2, motor1): #channel, speed of red port, speed of blue port
+    def PFComboPWMCommand(self, channel, motor2, motor1, addressSpace = 0): #channel, speed of red port, speed of blue port
         self.__mode = 7
-        getattr(hub.port, self.__port).device.mode(7, bytes([(motor1[0] << 4) | motor2[0]]) + bytes([channel[0] | 4]))
+        getattr(hub.port, self.__port).device.mode(7, bytes([(motor1[0] << 4) | motor2[0]]) + bytes([(addressSpace << 3) | channel[0] | 4]))
+    
+    #This command allows you to switch the PF receiver to extended address space. You can control a total of 8 receivers
+    #(4 channels in 2 address spaces) independently of each other.
+    #Turn 1 receiver on, send the change command and turn a second receiver on. Keep in mind to set the address space in the PF commands
+    #You can use this command and set currentAddressSpace to 1 to switch the receiver back to the normal address space
+    def PFChangeAddressSpace(self, channel, currentAddressSpace = 0):
+        self.__mode = 7
+        #print(bytes([(currentAddressSpace<<7) | 6]) + channel)
+        getattr(hub.port, self.__port).device.mode(7, bytes([(currentAddressSpace<<7) | 6]) + bytes([8 |channel[0]]))
     
     def PFNibbles(self, nibble1, nibble2, nibble3):
         self.__mode = 7
-        getattr(hub.port, self.__port).device.mode(7, bytes([(nibble2[0] << 4) | nibble3[0]]) + bytes([nibble1]))
+        getattr(hub.port, self.__port).device.mode(7, bytes([(nibble2[0] << 4) | nibble3[0]]) + channel)
 
 class motionSensor(UARTSensor):
     def __init__(self, sensorPort, sensorMode = 0):
