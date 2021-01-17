@@ -6,6 +6,7 @@ from hub import port
 #Philo
 #ahmedjouirou: https://github.com/ahmedjouirou/legopup_arduino
 #Ralph Hempel
+#Jorge Pereira
 #Extra huge thanks to:
 #Nard Strijbosch
 
@@ -114,9 +115,10 @@ class colorDistanceSensor(UARTSensor):
         self.__mode = 5
         getattr(hub.port, self.__port).device.mode(5, color)
     
-    #The bits are not in the order that you find in the PUP documentation. The following order is what I found:
-    #a? M M M D D D D L? L? L? L? T? E? C C (I didn't check bits with question marks. They have been determined by guessing)
+    #The bits are not in the order that you find in the PF documentation. The following order is what I found:
+    #a M M M D D D D L L L L T E C C
     #The Checksum (LLLL) is calculated automatically. It should be 0
+
     #This mode has a timeout but the sensor will repeat the command until you send another cmd or stop the program
     #motor1 and motor2 are NOT PWM commands
     #This mode is used by the normal PF remote (and the EV3 remote)
@@ -140,14 +142,22 @@ class colorDistanceSensor(UARTSensor):
         self.__mode = 7
         getattr(hub.port, self.__port).device.mode(7, bytes([(motor1[0] << 4) | motor2[0]]) + bytes([(addressSpace << 3) | channel[0] | 4]))
     
-    #This command allows you to switch the PF receiver to extended address space. You can control a total of 8 receivers
+    #This command allows you to switch the PF receiver to extended address space. You can control a total of 8 PF receivers
     #(4 channels in 2 address spaces) independently of each other.
-    #Turn 1 receiver on, send the change command and turn a second receiver on. Keep in mind to set the address space in the PF commands
-    #You can use this command and set currentAddressSpace to 1 to switch the receiver back to the normal address space
+    #Turn 1 receiver on, send the change command and turn a second receiver that uses the same channel on. Keep in mind to set
+    #"addressSpace" in the PF commands for receiver #1.
+    #You can use this command with currentAddressSpace=1 to switch the receiver back to the normal address space.
+    #Limitations: EV3 IR sensor ignores the address bit (it reacts whether the bit is set or not)
+    #             Power Functions V1 Receivers don't support this command (V1.2 however do). You have to use them as second receivers.
     def PFChangeAddressSpace(self, channel, currentAddressSpace = 0):
         self.__mode = 7
-        #print(bytes([(currentAddressSpace<<7) | 6]) + channel)
-        getattr(hub.port, self.__port).device.mode(7, bytes([(currentAddressSpace<<7) | 6]) + bytes([8 |channel[0]]))
+        #Send 3 toggle addresses CMDs with Toggle bit = 0 and 3 with toggle bit = 1. I couldn't get more relieable commands.
+        for x in range(3):
+            getattr(hub.port, self.__port).device.mode(7, bytes([(currentAddressSpace<<7) | 6]) + channel)
+            utime.sleep_ms(150)
+        for x in range(3):
+            getattr(hub.port, self.__port).device.mode(7, bytes([(currentAddressSpace<<7) | 6]) + bytes([8 |channel[0]]))
+            utime.sleep_ms(150)
     
     def PFNibbles(self, nibble1, nibble2, nibble3):
         self.__mode = 7
