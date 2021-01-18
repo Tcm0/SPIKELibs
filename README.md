@@ -1,7 +1,7 @@
 # SPIKELibs
 This is the repository for my LEGO SPIKE Prime (45678) and Robot Inventor (51515) libraries.
 
-###PUPSensorLib.py
+### PUPSensorLib.py
 This library can be used to use the other Powered Up sensors with the large hubs that LEGO doesn't support properly. Currently 3 sensors are supported:
 * Color & Distance Sensor (known from LEGO Boost)
 * Motion Sensor (known from LEGO WeDo 2.0 and the LEGO Ideas grand piano)
