@@ -90,21 +90,21 @@ class UARTSensor:
 
     def __init__(self, sensorPort, sensorMaxModes, sensorMode = 0):    #Port, mode
         self.__mode = sensorMode
-        self.__port = sensorPort
+        self.__port = getattr(hub.port, sensorPort).device
         self.maxModes = sensorMaxModes
         self.changeMode(sensorMode)
 
     def read(self):
-        return (getattr(hub.port, self.__port).device.get())
+        return (self.__port.get())
 
     #Writing is implemented for the sensors themselves! The following function does not work properly!
     #def write(self, data):
-    #        getattr(hub.port, self.__port).device.mode(self.__mode, data)
+    #        self.__port.mode(self.__mode, data)
 
     def changeMode(self, newSensorMode):
         if newSensorMode >= 0 and newSensorMode <= self.maxModes:
             self.__mode = newSensorMode
-            getattr(hub.port, self.__port).device.mode(newSensorMode)
+            self.__port.mode(newSensorMode)
 
 
 class colorDistanceSensor(UARTSensor):
@@ -113,7 +113,7 @@ class colorDistanceSensor(UARTSensor):
     
     def changeColor(self, color):
         self.__mode = 5
-        getattr(hub.port, self.__port).device.mode(5, color)
+        self.__port.mode(5, color)
     
     #The bits are not in the order that you find in the PF documentation. The following order is what I found:
     #a M M M D D D D L L L L T E C C
@@ -127,7 +127,7 @@ class colorDistanceSensor(UARTSensor):
         PFmode = b'\x10'
         motor1 = motor1[0] << 2
         sendbuf = (addressSpace << 7) | PFmode[0] | motor1 | motor2[0]
-        getattr(hub.port, self.__port).device.mode(7, bytes([sendbuf]) + channel)
+        self.__port.mode(7, bytes([sendbuf]) + channel)
     
     #This mode has no timeout (except special cases). It's used by the PF train remote
     #output is the port of the receiver. It can be 0 for the red port, 1 for the blue one
@@ -135,12 +135,12 @@ class colorDistanceSensor(UARTSensor):
     def PFSingleOutputCommand(self, channel, output, data, PFmode = 0, addressSpace = 0):    #basically channel, output and speed
         self.__mode = 7
         nibble2 = 4 | (PFmode << 1) | output
-        getattr(hub.port, self.__port).device.mode(7, bytes([(addressSpace << 7) | (nibble2 << 4) | data[0]]) + channel)
+        self.__port.mode(7, bytes([(addressSpace << 7) | (nibble2 << 4) | data[0]]) + channel)
     
     #This mode has timeout. motor1 and motor2 are PWM commands. First motor is red port, second is blue port
     def PFComboPWMCommand(self, channel, motor2, motor1, addressSpace = 0): #channel, speed of red port, speed of blue port
         self.__mode = 7
-        getattr(hub.port, self.__port).device.mode(7, bytes([(motor1[0] << 4) | motor2[0]]) + bytes([(addressSpace << 3) | channel[0] | 4]))
+        self.__port.mode(7, bytes([(motor1[0] << 4) | motor2[0]]) + bytes([(addressSpace << 3) | channel[0] | 4]))
     
     #This command allows you to switch the PF receiver to extended address space. You can control a total of 8 PF receivers
     #(4 channels in 2 address spaces) independently of each other.
@@ -154,15 +154,15 @@ class colorDistanceSensor(UARTSensor):
         #Send 3 toggle addresses CMDs with Toggle bit = 0 and toggle bit = 1. toggle seems to work like a remote press.
         #0: button gets pressed 1: button gets released
         for x in range(3):
-            getattr(hub.port, self.__port).device.mode(7, bytes([(currentAddressSpace<<7) | 6]) + channel)
+            self.__port.mode(7, bytes([(currentAddressSpace<<7) | 6]) + channel)
             utime.sleep_ms(150)
         #for x in range(3):
-            getattr(hub.port, self.__port).device.mode(7, bytes([(currentAddressSpace<<7) | 6]) + bytes([8 |channel[0]]))
+            self.__port.mode(7, bytes([(currentAddressSpace<<7) | 6]) + bytes([8 |channel[0]]))
             utime.sleep_ms(150)
     
     def PFNibbles(self, nibble1, nibble2, nibble3):
         self.__mode = 7
-        getattr(hub.port, self.__port).device.mode(7, bytes([(nibble2[0] << 4) | nibble3[0]]) + channel)
+        self.__port.mode(7, bytes([(nibble2[0] << 4) | nibble3[0]]) + channel)
 
 class motionSensor(UARTSensor):
     def __init__(self, sensorPort, sensorMode = 0):
